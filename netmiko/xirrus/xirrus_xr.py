@@ -31,14 +31,29 @@ class XirrusXR(BaseConnection):
     def exit_enable_mode(self, *args, **kwargs):
         """No enable mode on Xirrus APs."""
         pass
+
+    def check_config_mode(self, check_string='(config)', pattern=''):
+        """Checks if the device isin configuration mode or now."""
+        debug = False
+
+        if debug:
+            print("pattern: {}".format(pattern))
+
+        self.write_channel("!")
+        output = self.read_until_pattern(pattern=pattern)
+
+        if debug:
+            print("check_config_mode: {}".format(repr(output)))
+
+        return check_string not in output
    
     def config_mode(self, config_command='configure'):
         """Enter configuration mode."""
-        return super(XirrusSSH, self).config_mode(config_command=config_command)
+        return super(XirrusXR, self).config_mode(config_command=config_command)
 
     def exit_config_mode(self, exit_config='end'):
         """Exit configuration mode."""
-        return super(XirrusSSH, self).exit_config_mode(exit_config=exit_config)
+        return super(XirrusXR, self).exit_config_mode(exit_config=exit_config)
 
     def set_base_prompt(self, pri_prompt_terminator='#',
                         alt_prompt_terminator='>', delay_factor=1):
