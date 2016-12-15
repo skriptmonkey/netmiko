@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from netmiko.base_connection import BaseConnection
 import time
 
@@ -32,28 +33,41 @@ class XirrusXR(BaseConnection):
         """No enable mode on Xirrus APs."""
         pass
 
-    def check_config_mode(self, check_string='(config)', pattern=''):
-        """Checks if the device isin configuration mode or now."""
-        debug = False
-
+    def check_config_mode(self, check_string='', pattern=''):
+        """Checks if the device is in configuration mode or now."""
+        debug = True
         if debug:
             print("pattern: {}".format(pattern))
-
-        self.write_channel("!")
+        self.write_channel("\n")
         output = self.read_until_pattern(pattern=pattern)
-
         if debug:
             print("check_config_mode: {}".format(repr(output)))
-
-        return check_string not in output
+        return check_string in output
    
-    def config_mode(self, config_command='configure'):
+    def config_mode(self, config_command='configure', pattern='(config)'):
         """Enter configuration mode."""
-        return super(XirrusXR, self).config_mode(config_command=config_command)
+        output = ''
+        if not self.check_config_mode():
+            self.write_channel(self.normalize_cmd(config_command))
+            output = self.read_until_pattern(pattern=pattern)
+            if not self.check_config_mode():
+                raise ValueError("Failed to enter configuration mode.")
+        return output
 
-    def exit_config_mode(self, exit_config='end'):
+    def exit_config_mode(self, exit_config='end', pattern=''):
         """Exit configuration mode."""
-        return super(XirrusXR, self).exit_config_mode(exit_config=exit_config)
+        debug = False
+        output = ''
+        if debug:
+            print(exit_config)
+        if self.check_config_mode():
+            self.write_channel(self.normalize_cmd(exit_config))
+            output = self.read_until_pattern(pattern=pattern)
+            if debug:
+                print("exit_config_mode: {}".format(output))
+            if self.check_config_mode():
+                raise ValueError("Failed to exit configuration mode")
+        return output
 
     def set_base_prompt(self, pri_prompt_terminator='#',
                         alt_prompt_terminator='>', delay_factor=1):
@@ -69,7 +83,7 @@ class XirrusXR(BaseConnection):
 
     def disable_paging(self, command="no more", delay_factor=1):
         """Disable paging default to the xirrus method."""
-        debug = True
+        debug = False
         delay_factor = self.select_delay_factor(delay_factor)
         time.sleep(delay_factor * .1)
         self.clear_buffer()
